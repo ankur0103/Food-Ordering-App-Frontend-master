@@ -13,7 +13,8 @@ import InputLabel from '@material-ui/core/InputLabel';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import Typography from '@material-ui/core/Typography';
 import PropTypes from 'prop-types';
-import Snackbar from '@material-ui/core/Snackbar';
+import { withRouter } from 'react-router-dom';
+import Grid from '@material-ui/core/Grid';
 
 const customStyles = {
     content: {
@@ -25,6 +26,7 @@ const customStyles = {
         transform: 'translate(-50%, -50%)'
     }
 };
+
 
 const TabContainer = function(props) {
     return(
@@ -40,6 +42,8 @@ TabContainer.propTypes = {
 
 class Header extends Component {
 
+    
+
     constructor(props) {
         super(props);
         this.state = {
@@ -47,10 +51,8 @@ class Header extends Component {
             value: 0,
             loginContactno: "",
             loginContactnoRequired: "dispNone",
-            loginContactnoError: "",
             loginpassword: "",
             loginpasswordRequired: "dispNone",
-            loginpasswordError: "",
             firstname: "",
             firstnameRequired: "dispNone",
             lastname: "",
@@ -64,7 +66,7 @@ class Header extends Component {
             contactno: "",
             contactnoRequired: "dispNone",
             contactnoError: "",
-            signupSuccess: false
+            loggedIn: sessionStorage.getItem("access-token") == null ? false : true
         };
     }
 
@@ -83,48 +85,30 @@ class Header extends Component {
     };
 
     loginClickHandler = () => {
-
-        console.log(this.state.loginContactno.toString().match(/^(?=.*\d).{10,10}$/i) === null);
-
-        if (this.state.loginContactno === "") {
-            this.setState({loginContactnoRequired: "dispBlock"});
-            this.setState({loginContactnoError: "required"});
-        } else if (this.state.loginContactno.toString().match(/^(?=.*\d).{10,10}$/i) === null) {
-            this.setState({loginContactnoRequired: "dispBlock"});
-            this.setState({loginContactnoError: "Invalid Contact"});
-        } else {
-            this.setState({loginContactnoRequired: "dispNone"});
-            this.setState({loginContactnoError: ""});
-        }
-
+        this.state.loginContactno === "" ? this.setState({loginContactnoRequired: "dispBlock"}) : this.setState({loginContactnoRequired: "dispNone"});
         this.state.loginpassword === "" ? this.setState({loginpasswordRequired: "dispBlock"}) : this.setState({loginpasswordRequired: "dispNone"});
 
-        let loginData = null;
+        let dataLogin = null;
         let xhrLogin = new XMLHttpRequest();
         let that = this;
         xhrLogin.addEventListener("readystatechange", function () {
             if (this.readyState === 4) {
-                if (xhrLogin.status === 200 || xhrLogin.status === 201){
                 sessionStorage.setItem("uuid", JSON.parse(this.responseText).id);
                 sessionStorage.setItem("access-token", xhrLogin.getResponseHeader("access-token"));
 
                 that.setState({
-                    loggedIn: true,
-                    loginSnackBarIsOpen: true,
-                    
+                    loggedIn: true
                 });
 
                 that.closeModalHandler();
-
             }
-        }
         });
 
         xhrLogin.open("POST", "http://localhost:8080/api/customer/login");
         xhrLogin.setRequestHeader("Authorization", "Basic " + window.btoa(this.state.loginContactno + ":" + this.state.loginpassword));
         xhrLogin.setRequestHeader("Content-Type", "application/json");
         xhrLogin.setRequestHeader("Cache-Control", "no-cache");
-        xhrLogin.send(loginData);
+        xhrLogin.send(dataLogin);
     }
 
     inputLoginContactnoHandler = (e) => {
@@ -141,7 +125,7 @@ class Header extends Component {
         this.state.password === "" ? this.setState({passwordRequired: "dispBlock"}) : this.setState({passwordRequired: "dispNone"});
         this.state.contactno === "" ? this.setState({contactnoRequired: "dispBlock"}) : this.setState({contactnoRequired: "dispNone"});
 
-        if (this.state.password === "") {
+        /*if (this.state.password === "") {
             this.setState({passwordRequired: "dispBlock"});
             this.setState({passwordError: "required"});
         } else if (this.state.password.toString().match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{4,32}$/i) === null) {
@@ -161,8 +145,9 @@ class Header extends Component {
         } else {
             this.setState({emailRequired: "dispNone"});
             this.setState({emailError: ""});
-        }
+        }*/
 
+        //Contact No. must contain only numbers and must be 10 digits long
         if (this.state.contactno === "") {
             this.setState({contactnoRequired: "dispBlock"});
             this.setState({contactnoError: "required"});
@@ -173,37 +158,6 @@ class Header extends Component {
             this.setState({contactnoRequired: "dispNone"});
             this.setState({contactnoError: ""});
         }
-
-        let dataSignup = JSON.stringify({
-            "contact_number": this.state.contactno,
-            "email_address": this.state.email,
-            "first_name": this.state.firstname,
-            "last_name": this.state.lastname,
-            "password": this.state.password
-        });
-
-        let xhrSignup = new XMLHttpRequest();
-        let that = this;
-        xhrSignup.addEventListener("readystatechange", function () {
-            if (this.readyState === 4) {
-                if (xhrSignup.status === 200 || xhrSignup.status === 201){
-                that.setState({
-                    signupSuccess: true,
-                });
-            }
-            /*else{
-                
-               that.setState({
-                signupFailStatus: JSON.parse(this.responseText)
-             });
-            }*/
-        }
-        });
-
-        xhrSignup.open("POST", "http://localhost:8080/api/customer/signup");
-        xhrSignup.setRequestHeader("Content-Type", "application/json");
-        xhrSignup.setRequestHeader("Cache-Control", "no-cache");
-        xhrSignup.send(dataSignup);
 
     }
 
@@ -230,19 +184,26 @@ class Header extends Component {
     render() {  
         return(
             <div>
-                <header className="app-header flex-container">
-                    <div className="app-logo"> 
-                        <Fastfood style={{fontSize: "35px"}}/>
-                    </div>
-                    <div className="searchbox">
-                        <Search />
-                        <Input style={{color: "grey"}} type="text" placeholder="Search by Restaurant Name" onChange={this.props.searchChangeHandler}/>
-                    </div>
-                    <div className="login">
-                        <Button variant = "contained" color = "default" className="login-btn" onClick={this.openModalHandler}>
-                            <AccountCircle className="account-circle"/>LOGIN
-                        </Button>
-                    </div>
+                <header className="app-header">
+
+                    <Grid container spacing={3} justify="space-between" alignItems="center">
+                        <Grid item xs={12} sm>
+                            <div className="app-logo"> 
+                                <Fastfood style={{fontSize: "35px"}}/>
+                            </div>
+                        </Grid>
+                        { this.props.match.path ==="/" ? <Grid item xs={12} sm> <div className="searchbox">
+                            <Search />
+                            <Input style={{color: "grey", width:250}} className="searchField" type="text" placeholder="Search by Restaurant Name" onChange={this.props.searchChangeHandler}/>
+                        </div> </Grid> : ""}
+                        <Grid item xs={12} sm >
+                            <div className="login">
+                                <Button variant = "contained" color = "default" className="login-btn" onClick={this.openModalHandler}>
+                                    <AccountCircle className="account-circle"/>LOGIN
+                                </Button>
+                            </div>
+                        </Grid>
+                    </Grid>
                 </header>
 
                 <Modal  ariaHideApp={false} 
@@ -260,7 +221,7 @@ class Header extends Component {
                             <InputLabel htmlFor="loginContactno">Contact No.</InputLabel>
                             <Input id="loginContactno" type="text" className={this.state.loginContactno} onChange={this.inputLoginContactnoHandler}/>
                             <FormHelperText className={this.state.loginContactnoRequired}>
-                                <span className="red">{this.state.loginContactnoError}</span>
+                                <span className="red">required</span>
                             </FormHelperText>
                         </FormControl>
                         <br /> <br />
@@ -317,19 +278,10 @@ class Header extends Component {
                         </TabContainer>
                         }
                 </Modal>
-                { this.state.signupSuccess === true &&
-                    <Snackbar
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left', }}
-                    autoHideDuration={3000}
-                    style={{ vertical: 'bottom', horizontal: 'left' }}
-                    ContentProps={{ 'aria-describedby': 'message-id', }}
-                    message={<span id="message-id">Registered successfully! Please login now!</span>}
-                    />
-                }
             </div>
         )
     }
 
 }
 
-export default Header;
+export default withRouter(Header);
